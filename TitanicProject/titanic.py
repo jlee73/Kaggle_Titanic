@@ -12,6 +12,7 @@ import numpy as np
 import random as rnd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from sklearn.linear_model import LogisticRegression
 
 train_df = pd.read_csv('../TitanicProject/train.csv')
 test_df = pd.read_csv('../TitanicProject/test.csv')
@@ -67,6 +68,37 @@ for dataset in combine:
 
     dataset['Age'] = dataset['Age'].astype(int)
 
+#missing value on 'Fare' is replaced by the mean of the value
+mean_fare = train_df.Fare.dropna().mean()
+for dataset in combine:
+    dataset['Fare'] = dataset['Fare'].fillna(mean_fare)
+
 #print(guess_ages)
 train_df.head()
 print(train_df.head())
+
+X_train = train_df.drop("Survived", axis=1)
+Y_train = train_df["Survived"]
+X_test  = test_df.drop("PassengerId", axis=1).copy()
+X_train.shape, Y_train.shape, X_test.shape
+
+
+
+# Logistic Regression
+
+logreg = LogisticRegression()
+logreg.fit(X_train, Y_train)
+Y_pred = logreg.predict(X_test)
+acc_log = round(logreg.score(X_train, Y_train) * 100, 2)
+print(acc_log)
+coeff_df = pd.DataFrame(train_df.columns.delete(0))
+coeff_df.columns = ['Feature']
+coeff_df["Correlation"] = pd.Series(logreg.coef_[0])
+
+print(coeff_df.sort_values(by='Correlation', ascending=False))
+
+submission = pd.DataFrame({
+        "PassengerId": test_df["PassengerId"],
+        "Survived": Y_pred
+    })
+submission.to_csv('../TitanicProject/submission.csv', index=False)
